@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>IsrTube</title>
+
+    <link
+        rel="stylesheet"
+        href="/style.css"
+    >
+</head>
+
+<body>
+
+<header class="topbar">
+
+    <button
+        class="menu-button"
+        id="menuButton"
+    >
+        ☰
+    </button>
+
+    <div
+        class="logo"
+        onclick="showHome()"
+    >
+        <span class="logo-icon">▶</span>
+        <span>Isr<span>Tube</span></span>
+    </div>
+
+    <div class="search-box">
+        <input
+            id="searchInput"
+            type="text"
+            placeholder="Поиск"
+        >
+
+        <button id="searchButton">
+            🔍
+        </button>
+    </div>
+
+    <div class="top-actions">
+
+        <button
+            class="icon-button"
+            onclick="openUpload()"
+        >
+            ＋
+        </button>
+
+        <button
+            class="icon-button"
+            id="themeButton"
+        >
+            ☾
+        </button>
+
+        <div
+            id="userButton"
+            class="user-button"
+            onclick="openProfile()"
+        >
+            <span id="headerAvatar">👤</span>
+        </div>
+
+    </div>
+
+</header>
+
+
+<div class="layout">
+
+    <aside id="sidebar">
+
+        <nav>
+
+            <button
+                class="nav-item active"
+                onclick="showHome()"
+            >
+                🏠
+                <span>Главная</span>
+            </button>
+
+            <button
+                class="nav-item"
+                onclick="showTrending()"
+            >
+                🔥
+                <span>В тренде</span>
+            </button>
+
+            <button
+                class="nav-item"
+                onclick="showSubscriptions()"
+            >
+                📺
+                <span>Подписки</span>
+            </button>
+
+            <div class="separator"></div>
+
+            <button
+                class="nav-item"
+                onclick="openUpload()"
+            >
+                ⬆️
+                <span>Загрузить видео</span>
+            </button>
+
+            <button
+                class="nav-item"
+                onclick="openProfile()"
+            >
+                👤
+                <span>Мой профиль</span>
+            </button>
+
+            <div class="separator"></div>
+
+            <button
+                class="nav-item"
+                onclick="showAbout()"
+            >
+                ℹ️
+                <span>Об IsrTube</span>
+            </button>
+
+        </nav>
+
+    </aside>
+
+
+    <main id="mainContent">
+
+        <section id="homePage">
+
+            <div class="page-header">
+
+                <div>
+                    <h1 id="pageTitle">
+                        Главная
+                    </h1>
+
+                    <p id="pageSubtitle">
+                        Последние видео на IsrTube
+                    </p>
+                </div>
+
+            </div>
+
+            <div
+                id="videoGrid"
+                class="video-grid"
+            ></div>
+
+        </section>
+
+
+        <section
+            id="watchPage"
+            class="hidden"
+        >
+
+            <button
+                class="back-button"
+                onclick="showHome()"
+            >
+                ← Назад
+            </button>
+
+            <div class="watch-layout">
+
+                <div>
+
+                    <div class="player-wrapper">
+
+                        <video
+                            id="videoPlayer"
+                            controls
+                            playsinline
+                        ></video>
+
+                    </div>
+
+                    <h1 id="watchTitle"></h1>
+
+                    <div
+                        id="watchMeta"
+                        class="watch-meta"
+                    ></div>
+
+                    <div class="video-actions">
+
+                        <button
+                            id="likeButton"
+                            class="action-button"
+                        >
+                            ❤️
+                            <span id="likeCount">0</span>
+                        </button>
+
+                        <span id="viewCount"></span>
+
+                    </div>
+
+                    <div
+                        id="watchDescription"
+                        class="description"
+                    ></div>
+
+                </div>
+
+                <div class="comments-section">
+
+                    <h2>
+                        Комментарии
+                    </h2>
+
+                    <form
+                        id="commentForm"
+                        class="comment-form"
+                    >
+
+                        <input
+                            id="commentInput"
+                            type="text"
+                            maxlength="1000"
+                            placeholder="Напишите комментарий..."
+                            required
+                        >
+
+                        <button>
+                            Отправить
+                        </button>
+
+                    </form>
+
+                    <div
+                        id="commentsList"
+                    ></div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section
+            id="profilePage"
+            class="hidden"
+        >
+
+            <div
+                id="profileHeader"
+                class="profile-header"
+            ></div>
+
+            <h2>Видео</h2>
+
+            <div
+                id="profileVideos"
+                class="video-grid"
+            ></div>
+
+        </section>
+
+
+        <section
+            id="aboutPage"
+            class="hidden"
+        >
+
+            <div class="about-card">
+
+                <div class="big-logo">
+                    ▶ IsrTube
+                </div>
+
+                <h1>
+                    Добро пожаловать в IsrTube
+                </h1>
+
+                <p>
+                    IsrTube — независимая видеоплатформа
+                    с современным синим интерфейсом.
+                </p>
+
+                <p>
+                    Здесь можно публиковать видео,
+                    ставить лайки и общаться в комментариях.
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<!-- AUTH MODAL -->
+
+<div
+    id="authModal"
+    class="modal hidden"
+>
+
+    <div class="modal-card">
+
+        <button
+            class="modal-close"
+            onclick="closeModal('authModal')"
+        >
+            ×
+        </button>
+
+        <div class="auth-logo">
+            ▶ IsrTube
+        </div>
+
+        <h2 id="authTitle">
+            Вход
+        </h2>
+
+        <form id="authForm">
+
+            <div
+                id="registerUsername"
+                class="form-group hidden"
+            >
+
+                <label>
+                    Имя пользователя
+                </label>
+
+                <input
+                    id="usernameInput"
+                    type="text"
+                    minlength="3"
+                >
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+                    Email
+                </label>
+
+                <input
+                    id="emailInput"
+                    type="email"
+                    required
+                >
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+                    Пароль
+                </label>
+
+                <input
+                    id="passwordInput"
+                    type="password"
+                    minlength="6"
+                    required
+                >
+
+            </div>
+
+            <button
+                class="primary-button"
+                type="submit"
+            >
+                <span id="authSubmit">
+                    Войти
+                </span>
+            </button>
+
+        </form>
+
+        <button
+            id="switchAuth"
+            class="text-button"
+        >
+            Нет аккаунта? Зарегистрироваться
+        </button>
+
+        <div
+            id="authError"
+            class="error-message"
+        ></div>
+
+    </div>
+
+</div>
+
+
+<!-- UPLOAD MODAL -->
+
+<div
+    id="uploadModal"
+    class="modal hidden"
+>
+
+    <div class="modal-card upload-card">
+
+        <button
+            class="modal-close"
+            onclick="closeModal('uploadModal')"
+        >
+            ×
+        </button>
+
+        <h2>
+            Загрузить видео
+        </h2>
+
+        <form id="uploadForm">
+
+            <div class="form-group">
+
+                <label>
+                    Название
+                </label>
+
+                <input
+                    id="uploadTitle"
+                    type="text"
+                    maxlength="150"
+                    required
+                >
+
+            </div>
+
+            <div class="form-group">
+
+                <label>
+                    Описание
+                </label>
+
+                <textarea
+                    id="uploadDescription"
+                    maxlength="5000"
+                ></textarea>
+
+            </div>
+
+            <div class="file-drop">
+
+                <input
+                    id="videoFile"
+                    type="file"
+                    accept="video/*"
+                    required
+                >
+
+                <div>
+                    🎬
+                </div>
+
+                <p>
+                    Выберите видео
+                </p>
+
+                <small>
+                    Видео будет автоматически сжато
+                </small>
+
+            </div>
+
+            <div
+                id="uploadProgress"
+                class="progress hidden"
+            >
+                <div id="progressBar"></div>
+            </div>
+
+            <button
+                class="primary-button"
+                type="submit"
+            >
+                Опубликовать
+            </button>
+
+            <div
+                id="uploadError"
+                class="error-message"
+            ></div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<script src="/app.js"></script>
+
+</body>
+</html>
