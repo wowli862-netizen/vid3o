@@ -24,8 +24,6 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
-
 # ============================================================
 # CONFIG
 # ============================================================
@@ -84,6 +82,19 @@ app.mount(
     name="uploads",
 )
 
+@app.get("/")
+async def home():
+    return FileResponse("index.html")
+
+
+@app.get("/app.js")
+async def javascript():
+    return FileResponse("app.js")
+
+
+@app.get("/style.css")
+async def css():
+    return FileResponse("style.css")
 
 # ============================================================
 # HELPERS
