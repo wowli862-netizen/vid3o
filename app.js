@@ -171,6 +171,27 @@ function setupEvents() {
 
 }
 
+function openUpload() {
+
+    if (!currentUser) {
+        openAuth();
+        return;
+    }
+
+    const modal =
+        document.getElementById(
+            "uploadModal"
+        );
+
+    if (modal) {
+
+        modal.classList.remove(
+            "hidden"
+        );
+
+    }
+
+}
 
 // ============================================================
 // NAVIGATION
@@ -1144,11 +1165,10 @@ async function uploadAvatar() {
         return;
     }
 
-    const input =
-        document.createElement("input");
+    const input = document.createElement("input");
 
     input.type = "file";
-    input.accept = "image/*";
+    input.accept = "image/jpeg,image/png,image/webp";
 
     input.onchange = async () => {
 
@@ -1158,85 +1178,36 @@ async function uploadAvatar() {
             return;
         }
 
-        // Максимальный размер файла — 5 MB
         if (file.size > 5 * 1024 * 1024) {
-
-            alert(
-                "Аватар слишком большой. " +
-                "Максимальный размер — 5 МБ."
-            );
-
+            alert("Аватар слишком большой. Максимальный размер — 5 МБ.");
             return;
         }
 
-        if (!file.type.startsWith("image/")) {
+        const formData = new FormData();
 
-            alert(
-                "Можно загружать только изображения."
-            );
-
-            return;
-        }
+        formData.append(
+            "avatar",
+            file
+        );
 
         try {
 
-            // Читаем изображение
-            const reader =
-                new FileReader();
-
-            reader.onload = async () => {
-
-                const avatar =
-                    reader.result;
-
-                try {
-
-                    const data =
-                        await api(
-                            "/api/upload-avatar",
-                            {
-                                method: "POST",
-
-                                headers: {
-                                    "Content-Type":
-                                        "application/json"
-                                },
-
-                                body: JSON.stringify({
-                                    user_id:
-                                        currentUser.id,
-                                    avatar: avatar
-                                })
-                            }
-                        );
-
-                    // Обновляем пользователя
-                    currentUser.avatar =
-                        data.avatar;
-
-                    // Обновляем header
-                    updateHeader();
-
-                    // Обновляем профиль
-                    openProfile(
-                        currentUser.username
-                    );
-
-                    alert(
-                        "Аватар успешно изменён!"
-                    );
-
-                } catch (error) {
-
-                    alert(
-                        error.message
-                    );
-
+            const data = await api(
+                "/api/avatar",
+                {
+                    method: "POST",
+                    body: formData
                 }
+            );
 
-            };
+            currentUser.avatar =
+                data.avatar;
 
-            reader.readAsDataURL(file);
+            updateHeader();
+
+            await openProfile(
+                currentUser.username
+            );
 
         } catch (error) {
 
@@ -1246,6 +1217,7 @@ async function uploadAvatar() {
             );
 
             alert(
+                error.message ||
                 "Не удалось загрузить аватар."
             );
 
@@ -1256,7 +1228,6 @@ async function uploadAvatar() {
     input.click();
 }
 
-
 // ============================================================
 // VIDEO UPLOAD
 // ============================================================
@@ -1266,20 +1237,18 @@ async function uploadVideo(event) {
     event.preventDefault();
 
     if (!currentUser) {
-
         openAuth();
-
         return;
     }
 
     const titleInput =
         document.getElementById(
-            "videoTitle"
+            "uploadTitle"
         );
 
     const descriptionInput =
         document.getElementById(
-            "videoDescription"
+            "uploadDescription"
         );
 
     const videoInput =
@@ -1287,12 +1256,22 @@ async function uploadVideo(event) {
             "videoFile"
         );
 
-    if (!titleInput || !videoInput) {
-
-        alert(
-            "Элементы загрузки видео не найдены."
+    const errorElement =
+        document.getElementById(
+            "uploadError"
         );
 
+    const progress =
+        document.getElementById(
+            "uploadProgress"
+        );
+
+    const progressBar =
+        document.getElementById(
+            "progressBar"
+        );
+
+    if (!titleInput || !videoInput) {
         return;
     }
 
@@ -1308,22 +1287,18 @@ async function uploadVideo(event) {
         videoInput.files[0];
 
     if (!title) {
-
-        alert(
-            "Введите название видео."
-        );
-
+        errorElement.textContent =
+            "Введите название видео.";
         return;
     }
 
     if (!file) {
-
-        alert(
-            "Выберите видеофайл."
-        );
-
+        errorElement.textContent =
+            "Выберите видео.";
         return;
     }
+
+    errorElement.textContent = "";
 
     const formData =
         new FormData();
@@ -1345,6 +1320,13 @@ async function uploadVideo(event) {
 
     try {
 
+        progress.classList.remove(
+            "hidden"
+        );
+
+        progressBar.style.width =
+            "10%";
+
         const data =
             await api(
                 "/api/videos",
@@ -1353,6 +1335,9 @@ async function uploadVideo(event) {
                     body: formData
                 }
             );
+
+        progressBar.style.width =
+            "100%";
 
         alert(
             "Видео успешно загружено!"
@@ -1364,28 +1349,45 @@ async function uploadVideo(event) {
             )
             .reset();
 
-        if (data.video) {
+        closeModal(
+            "uploadModal"
+        );
 
+        progress.classList.add(
+            "hidden"
+        );
+
+        progressBar.style.width =
+            "0%";
+
+        await loadVideos();
+
+        if (data.video) {
             openVideo(
                 data.video.id
             );
-
-        } else {
-
-            loadVideos();
-
         }
 
     } catch (error) {
 
-        alert(
-            error.message
+        console.error(
+            "Ошибка загрузки видео:",
+            error
         );
 
+        errorElement.textContent =
+            error.message ||
+            "Не удалось загрузить видео.";
+
+        progress.classList.add(
+            "hidden"
+        );
+
+        progressBar.style.width =
+            "0%";
     }
 
 }
-
 
 // ============================================================
 // MODALS
