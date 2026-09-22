@@ -455,43 +455,38 @@ def compress_video(input_path: Path, output_path: Path):
     command = [
         ffmpeg,
         "-y",
-        "-i",
-        str(input_path),
+        "-threads", "1",
+        "-i", str(input_path),
 
-        # Video
-        "-c:v",
-        "libx264",
+        # Ограничиваем разрешение
+        "-vf", "scale='min(1280,iw)':-2",
 
-        # Compression
-        "-preset",
-        "medium",
-        "-crf",
-        "27",
+        # Более лёгкое кодирование
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
+        "-crf", "30",
+        "-tune", "zerolatency",
 
-        # Maximum reasonable resolution
-        "-vf",
-        "scale='min(1280,iw)':-2",
+        # Минимум дополнительных буферов
+        "-x264-params", "ref=1:bframes=0",
 
-        # Audio
-        "-c:a",
-        "aac",
-        "-b:a",
-        "128k",
+        # Аудио
+        "-c:a", "aac",
+        "-b:a", "96k",
 
-        # Web-friendly MP4
-        "-movflags",
-        "+faststart",
+        # Чтобы видео нормально начинало воспроизводиться из браузера
+        "-movflags", "+faststart",
 
         str(output_path),
     ]
 
     subprocess.run(
         command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
         check=True,
+        timeout=600,
     )
-
 
 # ============================================================
 # VIDEO UPLOAD
@@ -509,37 +504,98 @@ async def upload_video(
     if not video.content_type:
         raise HTTPException(
             status_code=400,
-            detail="Invalid video.",
+            detail="Не удалось определить тип видео."
         )
 
     if not video.content_type.startswith("video/"):
         raise HTTPException(
             status_code=400,
-            detail="The uploaded file is not a video.",
+            detail="Можно загружать только видеофайлы."
+        )
+
+    # Максимальный размер исходного файла — 100 MB.
+    # Это защищает бесплатный сервер от слишком тяжёлых загрузок.
+    MAX_VIDEO_SIZE = 100 * 1024 * 1024
+
+    try:
+        video.file.seek(0, 2)
+        file_size = video.file.tell()
+        video.file.seek(0)
+    except Exception:
+        file_size = 0
+
+    if file_size > MAX_VIDEO_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="Видео слишком большое. Максимальный размер — 100 МБ."
         )
 
     temporary_name = f"{uuid.uuid4().hex}_source"
-    extension = Path(video.filename or ".mp4").suffix or ".mp4"
+
+    extension = Path(video.filename or ".mp4").suffix.lower()
+
+    allowed_extensions = {
+        ".mp4",
+        ".mov",
+        ".mkv",
+        ".webm",
+        ".avi",
+        ".m4v",
+    }
+
+    if extension not in allowed_extensions:
+        extension = ".mp4"
 
     source_path = VIDEO_DIR / f"{temporary_name}{extension}"
     final_filename = f"{uuid.uuid4().hex}.mp4"
     final_path = VIDEO_DIR / final_filename
 
     try:
+        # Копируем файл небольшими блоками,
+        # не загружая всё видео в RAM.
         with open(source_path, "wb") as buffer:
-            shutil.copyfileobj(video.file, buffer)
+            while True:
+                chunk = video.file.read(1024 * 1024)
 
-        # Run compression in a worker thread so the API stays responsive.
+                if not chunk:
+                    break
+
+                buffer.write(chunk)
+
+        # Перекодирование с ограниченным использованием ресурсов.
         await asyncio.to_thread(
             compress_video,
             source_path,
             final_path,
         )
 
-    except subprocess.CalledProcessError:
+    except subprocess.TimeoutExpired:
+        if final_path.exists():
+            final_path.unlink()
+
         raise HTTPException(
             status_code=500,
-            detail="Video compression failed.",
+            detail="Обработка видео заняла слишком много времени."
+        )
+
+    except subprocess.CalledProcessError:
+        if final_path.exists():
+            final_path.unlink()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Не удалось обработать видео."
+        )
+
+    except Exception as error:
+        if final_path.exists():
+            final_path.unlink()
+
+        print("VIDEO UPLOAD ERROR:", error)
+
+        raise HTTPException(
+            status_code=500,
+            detail="Ошибка при загрузке видео."
         )
 
     finally:
@@ -551,33 +607,38 @@ async def upload_video(
     document = {
         "title": title.strip(),
         "description": description.strip(),
+
         "videoUrl": video_url,
         "thumbnailUrl": "",
+
         "ownerId": user["_id"],
         "ownerUsername": user["username"],
         "ownerAvatar": user.get("avatar", ""),
+
         "views": 0,
         "likes": 0,
         "duration": 0,
+
         "createdAt": datetime.now(timezone.utc).isoformat(),
     }
 
     result = videos_collection.insert_one(document)
 
-    created = videos_collection.find_one(
-        {"_id": result.inserted_id}
-    )
+    created = videos_collection.find_one({
+        "_id": result.inserted_id
+    })
 
-    await manager.broadcast(
-        {
-            "type": "new_video",
-            "video": serialize_video(created),
-        }
-    )
+    serialized_video = serialize_video(created)
+
+    await manager.broadcast({
+        "type": "new_video",
+        "video": serialized_video,
+    })
 
     return {
-        "video": serialize_video(created)
+        "video": serialized_video
     }
+
 
 
 # ============================================================
