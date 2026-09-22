@@ -354,6 +354,49 @@ async def me(request: Request):
         "user": serialize_user(user)
     }
 
+# ============================================================
+# USER PROFILE
+# ============================================================
+
+@app.get("/api/users/{username}")
+async def get_user_profile(username: str):
+
+    require_db()
+
+    username = username.strip()
+
+    if not username:
+        raise HTTPException(
+            status_code=400,
+            detail="Username is required."
+        )
+
+    user = users_collection.find_one({
+        "username": username
+    })
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="Пользователь не найден."
+        )
+
+    videos = list(
+        videos_collection
+        .find({
+            "ownerId": user["_id"]
+        })
+        .sort("createdAt", DESCENDING)
+        .limit(100)
+    )
+
+    return {
+        "user": serialize_user(user),
+        "videos": [
+            serialize_video(video)
+            for video in videos
+        ]
+    }
 
 # ============================================================
 # AVATAR
